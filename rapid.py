@@ -1,28 +1,49 @@
 import requests
 import json
-import handlers
 import re
+import loaders
 from telebot.types import InputMediaPhoto
+from loguru import logger
+from requests.exceptions import ReadTimeout
+from requests.exceptions import HTTPError
 
 
-def search_city(querystring) -> dict:
+logger.add('debug.log', format='{time} {message}', level='DEBUG')
+
+
+def get_rapid_json(querystring, url, control_pat) -> dict:
     """
-    Функция получает json-файл со списком городов по названию и возвращает его в виде словаря
+    Функция получает json-файл по заданной строке запроса и url и возвращает его в виде словаря
 
     :param querystring:
+    :param url:
+    :param control_pat:
     :type querystring: dict
+    :type url: str
+    :type control_pat: str
 
     :return: se_res
     :rtype: dict
     """
-    url = handlers.get_city_url
 
-    s_headers = handlers.site_header
-
-    response = requests.request("GET", url, headers=s_headers, params=querystring)
-
-    se_res = json.loads(response.text)
-    return se_res
+    s_headers = loaders.site_header
+    try:
+        response = requests.request("GET", url, headers=s_headers, params=querystring, timeout=10)
+        if response.status_code == requests.codes.ok:
+            find = re.search(control_pat, response.text)
+            if find:
+                se_res = json.loads(response.text)
+                return se_res
+            else:
+                raise ValueError
+        else:
+            response.raise_for_status()
+    except ReadTimeout:
+        logger.error('ReadTimeout')
+    except HTTPError:
+        logger.error('HTTPError')
+    except ValueError:
+        logger.error('ValueError')
 
 
 def get_city_list(city_dct, city_name) -> list:
@@ -81,25 +102,6 @@ def c_highlighter(text) -> str:
     return result
 
 
-def get_hotels_dict(querystring) -> dict:
-    """
-    Функция получает json-файл со списком отелей в выбранном городе и возвращает его в виде словаря
-
-    :param querystring:
-    :type querystring: dict
-
-    :return: hotels_dct
-    :rtype: dict
-    """
-    url = handlers.get_hotels_url
-
-    s_headers = handlers.site_header
-
-    response = requests.request("GET", url, headers=s_headers, params=querystring)
-    hotels_dct = json.loads(response.text)
-    return hotels_dct
-
-
 def get_hotels(h_num, hotels_dct) -> list:
     """
     Функция формирует список с заданным количеством словарей, содержащих информацию об отелях
@@ -128,34 +130,13 @@ def get_hotels(h_num, hotels_dct) -> list:
 
                 hotel['c_center'] = 'Нет данных'
                 for i_lab in i_elem['landmarks']:
-                    if i_lab['label'] == 'City center':
+                    if i_lab['label'] in ('City center', 'Центр города'):
                         hotel['c_center'] = i_lab['distance']
 
                 hotel['current'] = i_elem['ratePlan']['price']['current']
                 hotels_list.append(hotel)
 
     return hotels_list
-
-
-def get_photos(querystring) -> dict:
-    """
-    Функция получает json-файл со ссылками на фотографии данного отеля и возвращает его в виде словаря
-
-    :param querystring:
-    :type querystring: dict
-
-    :return: photos_dct
-    :rtype: dict
-    """
-    url = handlers.get_photos_url
-
-    s_headers = handlers.site_header
-
-    response = requests.request("GET", url, headers=s_headers, params=querystring)
-
-    photos_dct = json.loads(response.text)
-
-    return photos_dct
 
 
 def get_photos_lst(photos_dct, photos_n, hot_text) -> list:
