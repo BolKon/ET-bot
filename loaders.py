@@ -35,6 +35,16 @@ class Users:
 now = datetime.datetime.now()
 
 
+help_text = 'Доступные команды:\n /lowprice - поиск самых дешёвых отелей в городе\n ' \
+            '/highprice - поиск самых дорогих отелей в городе\n '\
+            '/bestdeal - поиск отелей наиболее подходящих по цене '\
+            'и удалённости от центра города\n '\
+            '/history - вывод истории поиска отелей'
+
+timeout_error_text = 'Превышено время ожидания ответа.\n   ' \
+                     'Пожалуйста, повторите запрос.\n\n{help}'.format(help=help_text)
+smth_wrong_text = 'Ой! Что-то пошло не так.\n   Пожалуйста повторите запрос.\n\n{help}'.format(help=help_text)
+
 get_city_url = 'https://hotels4.p.rapidapi.com/locations/v2/search'
 get_hotels_url = "https://hotels4.p.rapidapi.com/properties/list"
 get_photos_url = "https://hotels4.p.rapidapi.com/properties/get-hotel-photos"
@@ -49,12 +59,12 @@ hp = {"destinationId": "1137639", "pageNumber": "1", "pageSize": "25", "checkIn"
 bd = {}
 
 city_control_pat = r'(?<="CITY_GROUP",).+?[\]]'
-hotels_control_pat = r'(?<="results": \[).+?"pagination"'   #не работает
-photos_control_pat = r'"hotelImages": \['                   #пока неизвестно (думаю, что тоже не работает)
+hotels_control_pat = r'(?<=,)"results":.+?(?=,"pagination")'
+photos_control_pat = r'(?<=,)"hotelImages":.+?(?="roomImages":)'
 
-search_city = {"query": "new york", "locale": "ru_RU", "currency": "USD"}
+search_city = {"query": "new york", "locale": "ru_RU"}
 
-search_hotel = {"destinationId": "1506246", "pageNumber": "1", "pageSize": "25", "checkIn":"2020-01-08",
+search_hotel = {"destinationId": "1506246", "pageNumber": "1", "pageSize": "25", "checkIn": "2020-01-08",
                 "checkOut": "2020-01-15", "adults1": "1", "sortOrder": "PRICE", "locale": "en_US", "currency": "USD"}
 
 site_header = {'x-rapidapi-host': "hotels4.p.rapidapi.com",

@@ -11,7 +11,7 @@ from requests.exceptions import HTTPError
 logger.add('debug.log', format='{time} {message}', level='DEBUG')
 
 
-def get_rapid_json(querystring, url, control_pat) -> dict:
+def get_rapid_json(querystring, url, control_pat):
     """
     Функция получает json-файл по заданной строке запроса и url и возвращает его в виде словаря
 
@@ -38,12 +38,18 @@ def get_rapid_json(querystring, url, control_pat) -> dict:
                 raise ValueError
         else:
             response.raise_for_status()
-    except ReadTimeout:
-        logger.error('ReadTimeout')
-    except HTTPError:
-        logger.error('HTTPError')
-    except ValueError:
-        logger.error('ValueError')
+    except ReadTimeout as er:
+        logger.error(f'rapid.get_rapid_json - {er}')
+        se_res = {'result': 'timeout'}
+        return se_res
+    except HTTPError as er:
+        logger.error(f'rapid.get_rapid_json - {er}')
+        se_res = {'result': 'error'}
+        return se_res
+    except BaseException as er:
+        logger.error(f'rapid.get_rapid_json - {er}')
+        se_res = {'result': 'error'}
+        return se_res
 
 
 def get_city_list(city_dct, city_name) -> list:

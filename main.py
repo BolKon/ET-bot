@@ -1,8 +1,9 @@
 import handlers
-from loaders import bot
-from loaders import Users
-from telebot.types import CallbackQuery
-from keyboards import calendar, calendar_in, custom_keyboard
+import keyboards
+import loaders
+from loaders import bot, Users, now
+from telebot.types import CallbackQuery, ReplyKeyboardRemove
+from keyboards import calendar, calendar_in, calendar_out
 
 
 @bot.message_handler(commands=['start'])
@@ -11,6 +12,8 @@ def send_welcome(message) -> None:
     Стартовая команда для бота. Отправляет приветственное сообщение со ссылкой на команду /help
 
     :param message:
+    :type message: Message
+
     :return: None
     """
     bot.send_message(message.from_user.id, 'Вас приветствует Easy Travel бот - бот для поиска отелей в Вашем городе.\n'
@@ -23,13 +26,11 @@ def com_help(message) -> None:
     Команда отправляет пользователю сообщение со списком доступных команд и их описанием
 
     :param message:
+    :type message: Message
+
     :return: None
     """
-    bot.send_message(message.from_user.id, 'Доступные команды:\n /lowprice - поиск самых дешёвых отелей в городе\n '
-                                           '/highprice - поиск самых дорогих отелей в городе\n '
-                                           '/bestdeal - поиск отелей наиболее подходящих по цене '
-                                           'и удалённости от центра города\n '
-                                           '/history - вывод истории поиска отелей')
+    bot.send_message(message.from_user.id, loaders.help_text)
 
 
 @bot.message_handler(commands=['lowprice'])
@@ -38,6 +39,8 @@ def lowprice(message) -> None:
     Команда запускает процесс поиска самых дешёвых отелей в городе
 
     :param message:
+    :type message: Message
+
     :return: None
     """
     user = Users.get_user(message.from_user.id)
@@ -52,6 +55,8 @@ def highrice(message) -> None:
     Команда запускает процесс поиска самых дорогих отелей в городе
 
     :param message:
+    :type message: Message
+
     :return: None
     """
     user = Users.get_user(message.from_user.id)
@@ -66,6 +71,8 @@ def bestdeal(message) -> None:
     Команда запускает процесс поиска отелей наиболее подходящих по цене и удалённости от центра города
 
     :param message:
+    :type message: Message
+
     :return: None
     """
     user = Users.get_user(message.from_user.id)
@@ -80,29 +87,80 @@ def history(message) -> None:
     Команда отправляет пользователю историю его запросов к данному боту
 
     :param message:
+    :type message: Message
+
     :return: None
     """
     pass
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(calendar_in.prefix))
-def callback_inline(call: CallbackQuery):
+def callback_inline_in(call: CallbackQuery):
     """
-    Обработка inline callback запросов календаря
+    Обработка inline callback запросов calendar_in-календаря
+    Функция запрашивает дату выезда из отеля
 
     :param call:
     :return:
     """
+    user = Users.get_user(call.from_user.id)
     name, action, year, month, day = call.data.split(calendar_in.sep)
     date = calendar.calendar_query_handler(
         bot=bot, call=call, name=name, action=action, year=year, month=month, day=day
     )
     if action == "DAY":
-        markup = custom_keyboard([date.strftime('%Y-%m-%d')])
-        bot.send_message(
-            chat_id=call.from_user.id,
-            text=date.strftime('%Y-%m-%d'),
-            reply_markup=markup)
+        if date.strftime('%Y-%m-%d') < now.strftime('%Y-%m-%d'):
+            bot.send_message(call.from_user.id,
+                             text='Дата заселения не может быть меньше сегодняшней.',
+                             reply_markup=calendar.create_calendar(
+                                 name=calendar_in.prefix,
+                                 year=now.year,
+                                 month=now.month))
+        else:
+            user.check_in = date.strftime('%Y-%m-%d')
+            bot.send_message(call.from_user.id, text=f'Дата заселения: {user.check_in}.\nВыберите дату выезда:',
+                             reply_markup=calendar.create_calendar(
+                                 name=calendar_out.prefix,
+                                 year=now.year,
+                                 month=now.month))
+    elif action == 'CANCEL':
+        bot.send_message(call.from_user.id,
+                         'Операция отменена.\n\n{help}'.format(help=loaders.help_text),
+                         reply_markup=ReplyKeyboardRemove())
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith(calendar_out.prefix))
+def callback_inline_out(call: CallbackQuery):
+    """
+    Обработка inline callback запросов calendar_out-календаря
+    Функция запрашивает у пользователя количество отелей, которое нужно показать
+
+    :param call:
+    :return:
+    """
+    user = Users.get_user(call.from_user.id)
+    name, action, year, month, day = call.data.split(calendar_out.sep)
+    date = calendar.calendar_query_handler(
+        bot=bot, call=call, name=name, action=action, year=year, month=month, day=day
+    )
+    if action == "DAY":
+        if date.strftime('%Y-%m-%d') <= user.check_in:
+            bot.send_message(call.from_user.id,
+                             text=f'Дата выезда не может быть меньше даты заселения.\nДата заселения: {user.check_in}',
+                             reply_markup=calendar.create_calendar(
+                                 name=calendar_out.prefix,
+                                 year=now.year,
+                                 month=now.month))
+        else:
+            user.check_out = date.strftime('%Y-%m-%d')
+            bot.send_message(call.from_user.id, f'Дата заселения: {user.check_in}.\nДата выезда: {user.check_out}'
+                                                f'\nСколько отелей показать?',
+                             reply_markup=keyboards.hotels_num)
+            bot.register_next_step_handler(call.message, handlers.num_photos, user)
+    elif action == 'CANCEL':
+        bot.send_message(call.from_user.id,
+                         'Операция отменена.\n\n{help}'.format(help=loaders.help_text),
+                         reply_markup=ReplyKeyboardRemove())
 
 
 bot.infinity_polling()
