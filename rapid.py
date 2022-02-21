@@ -108,14 +108,18 @@ def c_highlighter(text) -> str:
     return result
 
 
-def get_hotels(h_num, hotels_dct) -> list:
+def get_hotels(h_num, hotels_dct, min_dist=0, max_dist=1000) -> list:
     """
     Функция формирует список с заданным количеством словарей, содержащих информацию об отелях
 
     :param h_num:
     :param hotels_dct:
+    :param min_dist
+    :param max_dist
     :type h_num: int
     :type hotels_dct: dict
+    :type min_dist: int
+    :type max_dist: int
 
     :return: hotels_list
     :rtype: list
@@ -139,8 +143,11 @@ def get_hotels(h_num, hotels_dct) -> list:
                     if i_lab['label'] in ('City center', 'Центр города'):
                         hotel['c_center'] = i_lab['distance']
 
-                hotel['current'] = i_elem['ratePlan']['price']['current']
-                hotels_list.append(hotel)
+                c_dist_str = re.sub(r',', '.', hotel['c_center'])
+                c_dist = float(re.sub(r' км', '', c_dist_str))
+                if min_dist <= c_dist <= max_dist:
+                    hotel['current'] = i_elem['ratePlan']['price']['current']
+                    hotels_list.append(hotel)
 
     return hotels_list
 

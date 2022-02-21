@@ -70,18 +70,133 @@ def city_hotels(message, search_res, user) -> None:
         text='Выберите денежную единицу для подсчета стоимости',
         reply_markup=keyboards.mark_currency
                      )
-    bot.register_next_step_handler(message, date_in)
+    if user.command == '/bestdeal':
+        bot.register_next_step_handler(message, min_price, user)
+    else:
+        bot.register_next_step_handler(message, date_in, user)
 
 
-def date_in(message):
+def min_price(message, user):
     """
-    Функция запрашивает дату заезда с помощью календаря.
+    Функция запрашивает у пользователя минимальную стоимость за номер в отеле
     :param message:
-    :type message: Message
-
+    :param user:
     :return:
     """
     qu['currency'] = message.text
+    bot.send_message(message.from_user.id, 'Введите минимальную стоимость номера(не меньше 0):')
+    bot.register_next_step_handler(message, max_price, user)
+
+
+def max_price(message, user):
+    """
+    Функция запрашивает у пользователя максимальную стоимость за номер в отеле
+    :param message:
+    :param user:
+    :return:
+    """
+    text_check = re.match(r'^\d+$', message.text)
+    if not text_check:
+        bot.send_message(message.from_user.id, 'Введите минимальную стоимость номера(не меньше 0)'
+                                               '\nПожалуйста, цифрами:')
+        bot.register_next_step_handler(message, max_price, user)
+    else:
+        if int(message.text) < 0:
+            bot.send_message(message.from_user.id, 'Введена стоимость меньше 0.'
+                                                   '\nВведите минимальную стоимость номера(не меньше 0):')
+            bot.register_next_step_handler(message, max_price, user)
+        else:
+            qu['priceMin'] = message.text
+            user.min_price = int(message.text)
+            bot.send_message(message.from_user.id, f'Минимальная стоимость номера: {user.min_price}{qu["currency"]}.'
+                                                   f'\nВведите максимальную стоимость номера:')
+            bot.register_next_step_handler(message, min_distance, user)
+
+
+def min_distance(message, user):
+    """
+    Функция запрашивает у пользователя минимальное расстояние до центра города
+    :param message:
+    :param user:
+    :return:
+    """
+    text_check = re.match(r'^\d+$', message.text)
+    if not text_check:
+        bot.send_message(message.from_user.id, f'Минимальная стоимость номера: {user.min_price}{qu["currency"]}.'
+                                               f'\nВведите максимальную стоимость номера\nПожалуйста, цифрами:')
+        bot.register_next_step_handler(message, min_distance, user)
+    else:
+        if int(message.text) <= user.min_price:
+            bot.send_message(message.from_user.id, f'Максимальная стоимость не может быть меньше минимальной.'
+                                                   f'\nМинимальная стоимость номера: {user.min_price}{qu["currency"]}.'
+                                                   f'\nВведите максимальную стоимость номера:')
+            bot.register_next_step_handler(message, min_distance, user)
+        else:
+            qu['priceMax'] = message.text
+            bot.send_message(message.from_user.id, 'Введите минимальное расстояние от центра города '
+                                                   'целым числом или в формате "0.5":')
+            bot.register_next_step_handler(message, max_distance, user)
+
+
+def max_distance(message, user):
+    """
+    Функция запрашивает у пользователя максимальное расстояние до центра города
+    :param message:
+    :param user:
+    :return:
+    """
+    text_check = re.match(r'^\d+$', message.text)
+    text_check2 = re.match(r'^\d+\.\d+$', message.text)
+    if not text_check and not text_check2:
+        bot.send_message(message.from_user.id, 'Неподходящий формат записи.'
+                                               '\nВведите минимальное расстояние от центра города '
+                                               'целым числом или в формате "0.5":')
+        bot.register_next_step_handler(message, max_distance, user)
+    else:
+        if float(message.text) < 0:
+            bot.send_message(message.from_user.id, 'Расстояние не может быть меньше 0.'
+                                                   '\nВведите минимальное расстояние от центра города '
+                                                   'целым числом или в формате "0.5":')
+            bot.register_next_step_handler(message, max_distance, user)
+
+        else:
+            user.min_distance = float(message.text)
+            bot.send_message(message.from_user.id, f'Минимальное расстояние: {user.min_distance}.'
+                                                   f'\nВведите максимальное расстояние от центра города '
+                                                   f'целым числом или в формате "0.5":')
+            bot.register_next_step_handler(message, date_in, user)
+
+
+def date_in(message, user):
+    """
+    Функция запрашивает дату заезда с помощью календаря.
+    :param message:
+    :param user:
+    :type message: Message
+    :type user: Users
+
+    :return:
+    """
+    if user.command == '/bestdeal':
+        text_check = re.match(r'^\d+$', message.text)
+        text_check2 = re.match(r'^\d+\.\d+$', message.text)
+        if not text_check and not text_check2:
+            bot.send_message(message.from_user.id, f'Неподходящий формат записи.'
+                                                   f'\nМинимальное расстояние: {user.min_distance}.'
+                                                   f'\nВведите максимальное расстояние от центра города '
+                                                   f'целым числом или в формате "0.5":')
+            bot.register_next_step_handler(message, date_in, user)
+        else:
+            if float(message.text) <= user.min_distance:
+                bot.send_message(message.from_user.id, f'Максимальное расстояние не может быть меньше минимального.'
+                                                       f'\nМинимальное расстояние: {user.min_distance}.'
+                                                       f'\nВведите максимальное расстояние от центра города '
+                                                       f'целым числом или в формате "0.5":')
+                bot.register_next_step_handler(message, date_in, user)
+            else:
+                user.max_distance = float(message.text)
+    else:
+        qu['currency'] = message.text
     bot.send_message(message.from_user.id,
                      'Выберите дату заезда',
                      reply_markup=calendar.create_calendar(
@@ -136,8 +251,15 @@ def show_hotels(message, hotels_n, user) -> None:
     elif hotels_dct == {'result': 'error'}:
         bot.send_message(message.from_user.id, loaders.smth_wrong_text)
     else:
-        hotels_list = rapid.get_hotels(hotels_n, hotels_dct)
-        if message.text == 'Не показывать':
+        if user.command == '/bestdeal':
+            hotels_list = rapid.get_hotels(hotels_n, hotels_dct, user.min_distance, user.max_distance)
+        else:
+            hotels_list = rapid.get_hotels(hotels_n, hotels_dct)
+
+        if not hotels_list:
+            bot.send_message(message.from_user.id, 'К сожалению отелей, удовлетворяющих запросу не найдено.')
+            bot.send_message(message.from_user.id, loaders.help_text)
+        elif message.text == 'Не показывать':
             user.hotels = hotels_list
             for i_hotel in hotels_list:
                 bot.send_message(message.from_user.id, 'Название:\n    {name}\n'
@@ -149,8 +271,8 @@ def show_hotels(message, hotels_n, user) -> None:
                                                                           c_center=i_hotel['c_center'],
                                                                           current=i_hotel['current']
                                                                           )
-                                 )
-            bot.send_message(message.from_user.id, loaders.help_text)
+                                     )
+                bot.send_message(message.from_user.id, loaders.help_text)
         else:
             hot_list = list()
             photos_n = int(message.text)
@@ -175,4 +297,3 @@ def show_hotels(message, hotels_n, user) -> None:
                     bot.send_media_group(message.from_user.id, p_lst)
                 user.hotels = hot_list
             bot.send_message(message.from_user.id, loaders.help_text)
-
