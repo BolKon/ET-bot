@@ -2,13 +2,12 @@ import requests
 import json
 import re
 import loaders
-from telebot.types import InputMediaPhoto
 from loguru import logger
 from requests.exceptions import ReadTimeout
 from requests.exceptions import HTTPError
 
-
-logger.add('debug.log', format='{time} {message}', level='DEBUG')
+debug_log = logger
+debug_log.add('debug.log', format='{time} {message}', level='DEBUG')
 
 
 def get_rapid_json(querystring, url, control_pat):
@@ -35,19 +34,19 @@ def get_rapid_json(querystring, url, control_pat):
                 se_res = json.loads(response.text)
                 return se_res
             else:
-                raise ValueError
+                raise ValueError('Результат поиска отсутствует')
         else:
             response.raise_for_status()
     except ReadTimeout as er:
-        logger.error(f'rapid.get_rapid_json - {er}')
+        debug_log.error(f'rapid.get_rapid_json - {er}')
         se_res = {'result': 'timeout'}
         return se_res
     except HTTPError as er:
-        logger.error(f'rapid.get_rapid_json - {er}')
+        debug_log.error(f'rapid.get_rapid_json - {er}')
         se_res = {'result': 'error'}
         return se_res
     except BaseException as er:
-        logger.error(f'rapid.get_rapid_json - {er}')
+        debug_log.error(f'rapid.get_rapid_json - {er}')
         se_res = {'result': 'error'}
         return se_res
 
@@ -125,43 +124,45 @@ def get_hotels(h_num, hotels_dct, min_dist=0, max_dist=1000) -> list:
     :rtype: list
     """
     hotels_list = []
-    for i_hot in range(h_num):
-        for i_ind, i_elem in enumerate(hotels_dct['data']['body']['searchResults']['results']):
-            if i_ind == i_hot:
-                hotel = dict()
+    try:
+        for i_hot in range(h_num):
+            for i_ind, i_elem in enumerate(hotels_dct['data']['body']['searchResults']['results']):
+                if i_ind == i_hot:
+                    hotel = dict()
 
-                hotel['id'] = str(i_elem['id'])
-                hotel['name'] = i_elem['name']
+                    hotel['id'] = str(i_elem['id'])
+                    hotel['name'] = i_elem['name']
 
-                if 'streetAddress' in i_elem['address']:
-                    hotel['address'] = i_elem['address']['streetAddress']
-                else:
-                    hotel['address'] = 'Не указан'
+                    if 'streetAddress' in i_elem['address']:
+                        hotel['address'] = i_elem['address']['streetAddress']
+                    else:
+                        hotel['address'] = 'Не указан'
 
-                hotel['c_center'] = 'Нет данных'
-                for i_lab in i_elem['landmarks']:
-                    if i_lab['label'] in ('City center', 'Центр города'):
-                        hotel['c_center'] = i_lab['distance']
+                    hotel['c_center'] = 'Нет данных'
+                    for i_lab in i_elem['landmarks']:
+                        if i_lab['label'] in ('City center', 'Центр города'):
+                            hotel['c_center'] = i_lab['distance']
 
-                c_dist_str = re.sub(r',', '.', hotel['c_center'])
-                c_dist = float(re.sub(r' км', '', c_dist_str))
-                if min_dist <= c_dist <= max_dist:
-                    hotel['current'] = i_elem['ratePlan']['price']['current']
-                    hotels_list.append(hotel)
-
+                    c_dist_str = re.sub(r',', '.', hotel['c_center'])
+                    c_dist = float(re.sub(r' км', '', c_dist_str))
+                    if min_dist <= c_dist <= max_dist:
+                        hotel['current'] = i_elem['ratePlan']['price']['current']
+                        hotels_list.append(hotel)
+    except BaseException as er:
+        debug_log.error(f'rapid.get_hotels - {er}')
+        hotels_list = []
+        return hotels_list
     return hotels_list
 
 
-def get_photos_lst(photos_dct, photos_n, hot_text) -> list:
+def get_photos_lst(photos_dct, photos_n) -> list:
     """
-    Функция формирует медиа-группу из фотографий отеля, добавляя к первому элементу текстовое описание этого отеля
+    Функция формирует список из фотографий отеля
 
     :param photos_dct:
     :param photos_n:
-    :param hot_text:
     :type photos_dct: dict
     :type photos_n: int
-    :type hot_text: str
 
     :return: photos_lst
     :rtype: list
@@ -170,9 +171,6 @@ def get_photos_lst(photos_dct, photos_n, hot_text) -> list:
     for i_ph in range(photos_n):
         for i_ind, i_photo in enumerate(photos_dct['hotelImages']):
             if i_ind == i_ph:
-                if i_ph == 0:
-                    photos_lst.append(InputMediaPhoto(i_photo['baseUrl'].format(size='w'), caption=hot_text))
-                else:
-                    photos_lst.append(InputMediaPhoto(i_photo['baseUrl'].format(size='w')))
+                photos_lst.append(i_photo['baseUrl'].format(size='w'))
 
     return photos_lst

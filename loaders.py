@@ -1,6 +1,7 @@
 import os
 import datetime
 import telebot
+from peewee import *
 from dotenv import load_dotenv
 
 load_dotenv('.env')
@@ -16,11 +17,14 @@ class Users:
         self.check_in = None
         self.check_out = None
         self.command = None
+        self.date = None
+        self.currency = None
         self.min_price = None
         self.max_price = None
         self.min_distance = None
         self.max_distance = None
-        self.hotels = None
+        self.qu_s = None
+        self.photos_check = False
 
         Users.add_user(user_id, self)
 
@@ -34,6 +38,33 @@ class Users:
     @classmethod
     def add_user(cls, user_id, user):
         cls.users[user_id] = user
+
+
+db = SqliteDatabase('users.db')
+
+
+class User(Model):
+    u_id = IntegerField()
+    command = CharField()
+    date = DateTimeField()
+    city = CharField()
+    currency = CharField(null=True)
+    min_price = IntegerField(null=True)
+    max_price = IntegerField(null=True)
+    min_distance = FloatField(null=True)
+    max_distance = FloatField(null=True)
+    check_in = DateField()
+    check_out = DateField()
+    hotels = CharField()
+    photos_list = CharField(null=True)
+    photos_check = BooleanField()
+
+    class Meta:
+        database = db
+
+
+with db:
+    User.create_table()
 
 
 now = datetime.datetime.now()
@@ -76,3 +107,6 @@ search_hotel = {"destinationId": "1506246", "pageNumber": "1", "pageSize": "25",
 site_header = {'x-rapidapi-host': "hotels4.p.rapidapi.com",
                'x-rapidapi-key': os.getenv('SITE_LOG')
                }
+
+rand_answer = ('Извини, котик, но я не говорю на кошачьем\U0001F408 \U0001F43E',
+               'Я Вас понял, но нет!\U0001F604', 'Искать меня научили, а вот, читать, нет\U0001F605')
