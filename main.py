@@ -5,12 +5,10 @@ import loaders
 import datetime
 import random
 from loguru import logger
-from loaders import bot, Users, now, User, db
+from loaders import bot, Users, now
+from models import User, db
 from telebot.types import CallbackQuery, ReplyKeyboardRemove, InputMediaPhoto
 from keyboards import calendar, calendar_in, calendar_out
-
-
-logger.add('info.log', format='{time} {message}', level='INFO', retention='10 days')
 
 
 @bot.message_handler(commands=['start'])
@@ -95,6 +93,7 @@ def bestdeal(message) -> None:
 
 
 @bot.message_handler(commands=['history'])
+@logger.catch
 def history(message) -> None:
     """
     Команда отправляет пользователю историю его запросов к данному боту
@@ -152,6 +151,7 @@ def history(message) -> None:
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(calendar_in.prefix))
+@logger.catch
 def callback_inline_in(call: CallbackQuery):
     """
     Обработка inline callback запросов calendar_in-календаря
@@ -189,6 +189,7 @@ def callback_inline_in(call: CallbackQuery):
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(calendar_out.prefix))
+@logger.catch
 def callback_inline_out(call: CallbackQuery):
     """
     Обработка inline callback запросов calendar_out-календаря
@@ -226,6 +227,7 @@ def callback_inline_out(call: CallbackQuery):
 
 
 @bot.message_handler(content_types=['text'])
+@logger.catch
 def random_message_text(message):
     bot.send_message(message.from_user.id, random.choice(loaders.rand_answer))
     bot.send_message(message.from_user.id, loaders.help_text)

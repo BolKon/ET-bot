@@ -4,11 +4,13 @@ import rapid
 import json
 import keyboards
 from loguru import logger
-from telebot.types import InputMediaPhoto
-from loaders import bot, now, Users, city_control_pat, hotels_control_pat, photos_control_pat, User, db
+from telebot.types import InputMediaPhoto, ReplyKeyboardRemove
+from models import User, db
+from loaders import bot, now, Users, city_control_pat, hotels_control_pat, photos_control_pat
 from keyboards import calendar, calendar_in
 
 
+@logger.catch
 def city(message, user) -> None:
     """
     Функция получает результат поиска города через API сайта
@@ -46,6 +48,7 @@ def city(message, user) -> None:
             bot.register_next_step_handler(message, city_hotels, search_res, user)
 
 
+@logger.catch
 def city_hotels(message, search_res, user) -> None:
     """
     Функция получает id-города из результата запроса, определяет нужную строку запроса и подставляет в нее значение id.
@@ -81,12 +84,16 @@ def city_hotels(message, search_res, user) -> None:
         bot.register_next_step_handler(message, date_in, user)
 
 
+@logger.catch
 def min_price(message, user):
     """
     Функция запрашивает у пользователя минимальную стоимость за номер в отеле
     :param message:
     :param user:
-    :return:
+    :type message: Message
+    :type user: Users
+
+    :return: None
     """
     user.currency = message.text
     user.qu_s['currency'] = message.text
@@ -94,12 +101,16 @@ def min_price(message, user):
     bot.register_next_step_handler(message, max_price, user)
 
 
+@logger.catch
 def max_price(message, user):
     """
     Функция запрашивает у пользователя максимальную стоимость за номер в отеле
     :param message:
     :param user:
-    :return:
+    :type message: Message
+    :type user: Users
+
+    :return: None
     """
     text_check = re.match(r'^\d+$', message.text)
     if not text_check:
@@ -120,12 +131,16 @@ def max_price(message, user):
             bot.register_next_step_handler(message, min_distance, user)
 
 
+@logger.catch
 def min_distance(message, user):
     """
     Функция запрашивает у пользователя минимальное расстояние до центра города
     :param message:
     :param user:
-    :return:
+    :type message: Message
+    :type user: Users
+
+    :return: None
     """
     text_check = re.match(r'^\d+$', message.text)
     if not text_check:
@@ -148,12 +163,16 @@ def min_distance(message, user):
             bot.register_next_step_handler(message, max_distance, user)
 
 
+@logger.catch
 def max_distance(message, user):
     """
     Функция запрашивает у пользователя максимальное расстояние до центра города
     :param message:
     :param user:
-    :return:
+    :type message: Message
+    :type user: Users
+
+    :return: None
     """
     text_check = re.match(r'^\d+$', message.text)
     text_check2 = re.match(r'^\d+\.\d+$', message.text)
@@ -177,6 +196,7 @@ def max_distance(message, user):
             bot.register_next_step_handler(message, date_in, user)
 
 
+@logger.catch
 def date_in(message, user):
     """
     Функция запрашивает дату заезда с помощью календаря.
@@ -185,7 +205,7 @@ def date_in(message, user):
     :type message: Message
     :type user: Users
 
-    :return:
+    :return: None
     """
     if user.command == '/bestdeal':
         text_check = re.match(r'^\d+$', message.text)
@@ -216,6 +236,7 @@ def date_in(message, user):
                      )
 
 
+@logger.catch
 def num_photos(message, user) -> None:
     """
     Функция сохраняет необходимое количество отелей.
@@ -239,6 +260,7 @@ def num_photos(message, user) -> None:
     bot.register_next_step_handler(message, show_hotels, hotels_n, user)
 
 
+@logger.catch
 def show_hotels(message, hotels_n, user) -> None:
     """
     Функция проверяет количество фотографий, необходимое к загрузке и
@@ -311,7 +333,7 @@ def show_hotels(message, hotels_n, user) -> None:
                 db_user.save()
             logger.info('handlers.show_hotels -'
                         ' Command completed!\n=================================================\n')
-            bot.send_message(message.from_user.id, loaders.help_text)
+            bot.send_message(message.from_user.id, loaders.help_text, reply_markup=ReplyKeyboardRemove())
         else:
             media_list = list()
             text_list = list()
@@ -329,6 +351,8 @@ def show_hotels(message, hotels_n, user) -> None:
                                 ' Process stopped!\n=================================================\n')
                     bot.send_message(message.from_user.id, loaders.smth_wrong_text)
                 else:
+                    if photos_n > 5:
+                        photos_n = 5
                     photos = list()
                     hot_text = 'Название:\n    {name}\n' \
                                'Адрес:\n    {address}\n' \
@@ -369,4 +393,4 @@ def show_hotels(message, hotels_n, user) -> None:
                 db_user.save()
             logger.info('handlers.show_hotels -'
                         ' Command completed!\n=================================================\n')
-            bot.send_message(message.from_user.id, loaders.help_text)
+            bot.send_message(message.from_user.id, loaders.help_text, reply_markup=ReplyKeyboardRemove())

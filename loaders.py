@@ -1,7 +1,7 @@
 import os
 import datetime
 import telebot
-from peewee import *
+from loguru import logger
 from dotenv import load_dotenv
 
 load_dotenv('.env')
@@ -40,32 +40,14 @@ class Users:
         cls.users[user_id] = user
 
 
-db = SqliteDatabase('users.db')
+def info_only(record):
+    return record["level"].name == "INFO"
 
 
-class User(Model):
-    u_id = IntegerField()
-    command = CharField()
-    date = DateTimeField()
-    city = CharField()
-    currency = CharField(null=True)
-    min_price = IntegerField(null=True)
-    max_price = IntegerField(null=True)
-    min_distance = FloatField(null=True)
-    max_distance = FloatField(null=True)
-    check_in = DateField()
-    check_out = DateField()
-    hotels = CharField()
-    photos_list = CharField(null=True)
-    photos_check = BooleanField()
-
-    class Meta:
-        database = db
-
-
-with db:
-    User.create_table()
-
+bot_logger = logger
+bot_logger.add('info.log', format='{time} {message}', level='INFO', rotation='10 MB',
+               compression='zip', filter=info_only)
+bot_logger.add('debug.log', format='{time} {message}', level='ERROR', rotation='10 MB', compression='zip')
 
 now = datetime.datetime.now()
 

@@ -6,9 +6,6 @@ from loguru import logger
 from requests.exceptions import ReadTimeout
 from requests.exceptions import HTTPError
 
-debug_log = logger
-debug_log.add('debug.log', format='{time} {message}', level='DEBUG')
-
 
 def get_rapid_json(querystring, url, control_pat):
     """
@@ -34,23 +31,24 @@ def get_rapid_json(querystring, url, control_pat):
                 se_res = json.loads(response.text)
                 return se_res
             else:
-                raise ValueError('Результат поиска отсутствует')
+                raise ValueError('No search result!')
         else:
             response.raise_for_status()
     except ReadTimeout as er:
-        debug_log.error(f'rapid.get_rapid_json - {er}')
+        logger.error(f'rapid.get_rapid_json - {er}')
         se_res = {'result': 'timeout'}
         return se_res
     except HTTPError as er:
-        debug_log.error(f'rapid.get_rapid_json - {er}')
+        logger.error(f'rapid.get_rapid_json - {er}')
         se_res = {'result': 'error'}
         return se_res
-    except BaseException as er:
-        debug_log.error(f'rapid.get_rapid_json - {er}')
+    except ValueError as er:
+        logger.error(f'rapid.get_rapid_json - {er}')
         se_res = {'result': 'error'}
         return se_res
 
 
+@logger.catch
 def get_city_list(city_dct, city_name) -> list:
     """
     Функция возвращает уточняющий список городов с совпадающим названием из запроса
@@ -72,6 +70,7 @@ def get_city_list(city_dct, city_name) -> list:
             return city_list
 
 
+@logger.catch
 def get_city_id(city_dct, city_name) -> str:
     """
     Функция возвращает id города после его уточнения
@@ -92,6 +91,7 @@ def get_city_id(city_dct, city_name) -> str:
                     return city_id
 
 
+@logger.catch
 def c_highlighter(text) -> str:
     """
     Функция убирает разметку из строки с описанием названия города
@@ -107,6 +107,7 @@ def c_highlighter(text) -> str:
     return result
 
 
+@logger.catch
 def get_hotels(h_num, hotels_dct, min_dist=0, max_dist=1000) -> list:
     """
     Функция формирует список с заданным количеством словарей, содержащих информацию об отелях
@@ -149,12 +150,13 @@ def get_hotels(h_num, hotels_dct, min_dist=0, max_dist=1000) -> list:
                         hotel['current'] = i_elem['ratePlan']['price']['current']
                         hotels_list.append(hotel)
     except BaseException as er:
-        debug_log.error(f'rapid.get_hotels - {er}')
+        logger.error(f'rapid.get_hotels - {er}')
         hotels_list = []
         return hotels_list
     return hotels_list
 
 
+@logger.catch
 def get_photos_lst(photos_dct, photos_n) -> list:
     """
     Функция формирует список из фотографий отеля
