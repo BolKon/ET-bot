@@ -1,7 +1,9 @@
 import os
 import datetime
 import telebot
+from loguru import logger
 from dotenv import load_dotenv
+
 
 load_dotenv('.env')
 token = os.getenv('BOT_TOKEN')
@@ -16,7 +18,14 @@ class Users:
         self.check_in = None
         self.check_out = None
         self.command = None
-        self.hotels = None
+        self.date = None
+        self.currency = None
+        self.min_price = None
+        self.max_price = None
+        self.min_distance = None
+        self.max_distance = None
+        self.qu_s = None
+        self.photos_check = False
 
         Users.add_user(user_id, self)
 
@@ -31,6 +40,15 @@ class Users:
     def add_user(cls, user_id, user):
         cls.users[user_id] = user
 
+
+def info_only(record):
+    return record["level"].name == "INFO"
+
+
+bot_logger = logger
+bot_logger.add('info.log', format='{time} {message}', level='INFO', rotation='10 MB',
+               compression='zip', filter=info_only)
+bot_logger.add('debug.log', format='{time} {message}', level='ERROR', rotation='10 MB', compression='zip')
 
 now = datetime.datetime.now()
 
@@ -49,14 +67,16 @@ get_city_url = 'https://hotels4.p.rapidapi.com/locations/v2/search'
 get_hotels_url = "https://hotels4.p.rapidapi.com/properties/list"
 get_photos_url = "https://hotels4.p.rapidapi.com/properties/get-hotel-photos"
 
-lp = {"destinationId": "1137639", "pageNumber": "1", "pageSize": "25", "checkIn": "2022-02-15",
+lp = {"destinationId": "1137639", "pageNumber": "1", "pageSize": "10", "checkIn": "2022-02-15",
       "checkOut": "2022-02-21", "adults1": "1", "sortOrder": "PRICE", "locale": "ru_RU", "currency": "RUB"}
 
-hp = {"destinationId": "1137639", "pageNumber": "1", "pageSize": "25", "checkIn": "2022-02-15",
+hp = {"destinationId": "1137639", "pageNumber": "1", "pageSize": "10", "checkIn": "2022-02-15",
       "checkOut": "2022-02-21", "adults1": "1", "sortOrder": "PRICE_HIGHEST_FIRST", "locale": "ru_RU",
       "currency": "RUB"}
 
-bd = {}
+bd = {"destinationId": "1506246", "pageNumber": "1", "pageSize": "10", "checkIn": "2020-01-08",
+      "checkOut": "2020-01-15", "adults1": "1", "priceMin": "300", "priceMax": "2000",
+      "sortOrder": "DISTANCE_FROM_LANDMARK", "locale": "ru_RU", "currency": "RUB"}
 
 city_control_pat = r'(?<="CITY_GROUP",).+?[\]]'
 hotels_control_pat = r'(?<=,)"results":.+?(?=,"pagination")'
@@ -70,3 +90,6 @@ search_hotel = {"destinationId": "1506246", "pageNumber": "1", "pageSize": "25",
 site_header = {'x-rapidapi-host': "hotels4.p.rapidapi.com",
                'x-rapidapi-key': os.getenv('SITE_LOG')
                }
+
+rand_answer = ('Извини, котик, но я не говорю на кошачьем\U0001F408 \U0001F43E',
+               'Я Вас понял, но нет!\U0001F604', 'Искать меня научили, а вот, читать, нет\U0001F605')

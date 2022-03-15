@@ -2,13 +2,9 @@ import requests
 import json
 import re
 import loaders
-from telebot.types import InputMediaPhoto
 from loguru import logger
 from requests.exceptions import ReadTimeout
 from requests.exceptions import HTTPError
-
-
-logger.add('debug.log', format='{time} {message}', level='DEBUG')
 
 
 def get_rapid_json(querystring, url, control_pat):
@@ -35,23 +31,24 @@ def get_rapid_json(querystring, url, control_pat):
                 se_res = json.loads(response.text)
                 return se_res
             else:
-                raise ValueError
+                raise ValueError('No search result!')
         else:
             response.raise_for_status()
     except ReadTimeout as er:
-        logger.error(f'rapid.get_rapid_json - {er}')
+        logger.error(f'rapid.get_rapid_json - {er}\n=================================================\n')
         se_res = {'result': 'timeout'}
         return se_res
     except HTTPError as er:
-        logger.error(f'rapid.get_rapid_json - {er}')
+        logger.error(f'rapid.get_rapid_json - {er}\n=================================================\n')
         se_res = {'result': 'error'}
         return se_res
-    except BaseException as er:
-        logger.error(f'rapid.get_rapid_json - {er}')
+    except ValueError as er:
+        logger.error(f'rapid.get_rapid_json - {er}\n=================================================\n')
         se_res = {'result': 'error'}
         return se_res
 
 
+@logger.catch
 def get_city_list(city_dct, city_name) -> list:
     """
     Функция возвращает уточняющий список городов с совпадающим названием из запроса
@@ -73,6 +70,7 @@ def get_city_list(city_dct, city_name) -> list:
             return city_list
 
 
+@logger.catch
 def get_city_id(city_dct, city_name) -> str:
     """
     Функция возвращает id города после его уточнения
@@ -93,6 +91,7 @@ def get_city_id(city_dct, city_name) -> str:
                     return city_id
 
 
+@logger.catch
 def c_highlighter(text) -> str:
     """
     Функция убирает разметку из строки с описанием названия города
@@ -108,14 +107,19 @@ def c_highlighter(text) -> str:
     return result
 
 
-def get_hotels(h_num, hotels_dct) -> list:
+@logger.catch
+def get_hotels(h_num, hotels_dct, min_dist=0, max_dist=1000) -> list:
     """
     Функция формирует список с заданным количеством словарей, содержащих информацию об отелях
 
     :param h_num:
     :param hotels_dct:
+    :param min_dist
+    :param max_dist
     :type h_num: int
     :type hotels_dct: dict
+    :type min_dist: int
+    :type max_dist: int
 
     :return: hotels_list
     :rtype: list
@@ -139,22 +143,24 @@ def get_hotels(h_num, hotels_dct) -> list:
                     if i_lab['label'] in ('City center', 'Центр города'):
                         hotel['c_center'] = i_lab['distance']
 
-                hotel['current'] = i_elem['ratePlan']['price']['current']
-                hotels_list.append(hotel)
-
+                if hotel['c_center'] != 'Нет данных':
+                    c_dist_str = re.sub(r',', '.', hotel['c_center'])
+                    c_dist = float(re.sub(r' км', '', c_dist_str))
+                    if min_dist <= c_dist <= max_dist:
+                        hotel['current'] = i_elem['ratePlan']['price']['current']
+                        hotels_list.append(hotel)
     return hotels_list
 
 
-def get_photos_lst(photos_dct, photos_n, hot_text) -> list:
+@logger.catch
+def get_photos_lst(photos_dct, photos_n) -> list:
     """
-    Функция формирует медиа-группу из фотографий отеля, добавляя к первому элементу текстовое описание этого отеля
+    Функция формирует список из фотографий отеля
 
     :param photos_dct:
     :param photos_n:
-    :param hot_text:
     :type photos_dct: dict
     :type photos_n: int
-    :type hot_text: str
 
     :return: photos_lst
     :rtype: list
@@ -163,9 +169,6 @@ def get_photos_lst(photos_dct, photos_n, hot_text) -> list:
     for i_ph in range(photos_n):
         for i_ind, i_photo in enumerate(photos_dct['hotelImages']):
             if i_ind == i_ph:
-                if i_ph == 0:
-                    photos_lst.append(InputMediaPhoto(i_photo['baseUrl'].format(size='w'), caption=hot_text))
-                else:
-                    photos_lst.append(InputMediaPhoto(i_photo['baseUrl'].format(size='w')))
+                photos_lst.append(i_photo['baseUrl'].format(size='w'))
 
     return photos_lst
