@@ -4,6 +4,7 @@ import telebot
 from loguru import logger
 from dotenv import load_dotenv
 
+
 load_dotenv('.env')
 token = os.getenv('BOT_TOKEN')
 bot = telebot.TeleBot(token)

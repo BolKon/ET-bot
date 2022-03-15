@@ -146,7 +146,8 @@ def history(message) -> None:
                     for i_hotel in hot_list:
                         bot.send_message(message.from_user.id, i_hotel)
                     bot.send_message(message.from_user.id, '==================')
-    logger.info('Command completed.\n=================================================\n')
+    logger.info('main.history({user}) - Command completed.\n=================================================\n'.
+                format(user=message.from_user.id))
     bot.send_message(message.from_user.id, loaders.help_text)
 
 
@@ -181,8 +182,9 @@ def callback_inline_in(call: CallbackQuery):
                                  year=now.year,
                                  month=now.month))
     elif action == 'CANCEL':
-        logger.info('main.callback_inline_in -'
-                    ' User canceled process.\n=================================================\n')
+        logger.info('main.callback_inline_in({user}) -'
+                    ' User canceled process.\n=================================================\n'.
+                    format(user=call.from_user.id))
         bot.send_message(call.from_user.id,
                          'Операция отменена.\n\n{help}'.format(help=loaders.help_text),
                          reply_markup=ReplyKeyboardRemove())
@@ -219,8 +221,9 @@ def callback_inline_out(call: CallbackQuery):
                              reply_markup=keyboards.hotels_num)
             bot.register_next_step_handler(call.message, handlers.num_photos, user)
     elif action == 'CANCEL':
-        logger.info('main.callback_inline_out -'
-                    ' User canceled process.\n=================================================\n')
+        logger.info('main.callback_inline_out({user}) -'
+                    ' User canceled process.\n=================================================\n'.
+                    format(user=call.from_user.id))
         bot.send_message(call.from_user.id,
                          'Операция отменена.\n\n{help}'.format(help=loaders.help_text),
                          reply_markup=ReplyKeyboardRemove())

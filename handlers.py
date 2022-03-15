@@ -26,20 +26,24 @@ def city(message, user) -> None:
     se_ci = loaders.search_city
     se_ci['locale'] = 'ru_RU' if re.match(r'[А-Яа-яЁё]+', message.text) else 'en_US'
     se_ci['query'] = message.text
-    logger.info('handlers.city - Input city: {city}'.format(city=message.text))
+    logger.info('handlers.city({user}) - Input city: {city}'.format(user=message.from_user.id, city=message.text))
     search_res = rapid.get_rapid_json(se_ci, loaders.get_city_url, city_control_pat)
     if search_res == {'result': 'timeout'}:
-        logger.info('handlers.city - ReadTimeout. '
-                    'Process stopped!\n=================================================\n')
+        logger.info('handlers.city({user}) - ReadTimeout. '
+                    'Process stopped!\n=================================================\n'.
+                    format(user=message.from_user.id))
         bot.send_message(message.from_user.id, loaders.timeout_error_text)
     elif search_res == {'result': 'error'}:
-        logger.info('handlers.city - Error! Process stopped!\n=================================================\n')
+        logger.info('handlers.city({user}) - '
+                    'Error! Process stopped!\n=================================================\n'.
+                    format(user=message.from_user.id))
         bot.send_message(message.from_user.id, loaders.smth_wrong_text)
     else:
         city_list = rapid.get_city_list(search_res, message.text)
         if not city_list:
-            logger.info('handlers.city - No result. '
-                        'Process stopped!\n=================================================\n')
+            logger.info('handlers.city({user}) - No result. '
+                        'Process stopped!\n=================================================\n'.
+                        format(user=message.from_user.id))
             bot.send_message(message.from_user.id, 'К сожалению, по данному названию ничего не найдено.'
                                                    '\n\n{help}'.format(help=loaders.help_text))
         else:
@@ -276,20 +280,22 @@ def show_hotels(message, hotels_n, user) -> None:
 
     :return: None
     """
-    logger.info('handlers.show_hotels - Query parameters:\n     Selected city: {city}'
+    logger.info('handlers.show_hotels({user}) - Query parameters:\n     Selected city: {city}'
                 '\n     Price range: {min_p}-{max_p}\n     Distance range: {min_d}-{max_d} km'
                 '\n     Check in-out: {ch_in} - {ch_out}\n     Number od hotels: {hot_n}\n     Photos flag: {ph_f}'.
-                format(city=user.city, min_p=user.min_price, max_p=user.max_price, min_d=user.min_distance,
-                       max_d=user.max_distance, ch_in=user.check_in, ch_out=user.check_out,
-                       hot_n=hotels_n, ph_f=message.text))
+                format(user=message.from_user.id, city=user.city, min_p=user.min_price, max_p=user.max_price,
+                       min_d=user.min_distance, max_d=user.max_distance, ch_in=user.check_in,
+                       ch_out=user.check_out, hot_n=hotels_n, ph_f=message.text))
     hotels_dct = rapid.get_rapid_json(user.qu_s, loaders.get_hotels_url, hotels_control_pat)
     if hotels_dct == {'result': 'timeout'}:
-        logger.info('handlers.show_hotels - ReadTimeout.'
-                    ' Process stopped!\n=================================================\n')
+        logger.info('handlers.show_hotels({user}) - ReadTimeout.'
+                    ' Process stopped!\n=================================================\n'.
+                    format(user=message.from_user.id))
         bot.send_message(message.from_user.id, loaders.timeout_error_text)
     elif hotels_dct == {'result': 'error'}:
-        logger.info('handlers.show_hotels - Error!'
-                    ' Process stopped!\n=================================================\n')
+        logger.info('handlers.show_hotels({user}) - Error!'
+                    ' Process stopped!\n=================================================\n'.
+                    format(user=message.from_user.id))
         bot.send_message(message.from_user.id, loaders.smth_wrong_text)
     else:
         if user.command == '/bestdeal':
@@ -299,10 +305,12 @@ def show_hotels(message, hotels_n, user) -> None:
 
         if not hotels_list:
             bot.send_message(message.from_user.id, 'К сожалению отелей, удовлетворяющих запросу не найдено.')
-            logger.info('handlers.show_hotels - No result.'
-                        ' Process stopped!\n=================================================\n')
+            logger.info('handlers.show_hotels({user}) - No result.'
+                        ' Process stopped!\n=================================================\n'.
+                        format(user=message.from_user.id))
             bot.send_message(message.from_user.id, loaders.help_text)
         elif message.text == 'Не показывать':
+            user.photos_check = False
             text_list = list()
             for i_hotel in hotels_list:
                 hot_text = 'Название:\n    {name}\n' \
@@ -331,8 +339,9 @@ def show_hotels(message, hotels_n, user) -> None:
                                       photos_check=user.photos_check,
                                       hotels=js_hotels_list)
                 db_user.save()
-            logger.info('handlers.show_hotels -'
-                        ' Command completed!\n=================================================\n')
+            logger.info('handlers.show_hotels({user}) -'
+                        ' Command completed!\n=================================================\n'.
+                        format(user=message.from_user.id))
             bot.send_message(message.from_user.id, loaders.help_text, reply_markup=ReplyKeyboardRemove())
         else:
             media_list = list()
@@ -343,12 +352,14 @@ def show_hotels(message, hotels_n, user) -> None:
                 qs = {'id': i_hotel['id']}
                 photos_dct = rapid.get_rapid_json(qs, loaders.get_photos_url, photos_control_pat)
                 if photos_dct == {'result': 'timeout'}:
-                    logger.info('handlers.show_hotels - ReadTimeout.'
-                                ' Process stopped!\n=================================================\n')
+                    logger.info('handlers.show_hotels({user}) - ReadTimeout.'
+                                ' Process stopped!\n=================================================\n'.
+                                format(user=message.from_user.id))
                     bot.send_message(message.from_user.id, loaders.timeout_error_text)
                 elif photos_dct == {'result': 'error'}:
-                    logger.info('handlers.show_hotels - Error!'
-                                ' Process stopped!\n=================================================\n')
+                    logger.info('handlers.show_hotels({user}) - Error!'
+                                ' Process stopped!\n=================================================\n'.
+                                format(user=message.from_user.id))
                     bot.send_message(message.from_user.id, loaders.smth_wrong_text)
                 else:
                     if photos_n > 5:
@@ -391,6 +402,7 @@ def show_hotels(message, hotels_n, user) -> None:
                                       photos_list=ml_json,
                                       hotels=tl_json)
                 db_user.save()
-            logger.info('handlers.show_hotels -'
-                        ' Command completed!\n=================================================\n')
+            logger.info('handlers.show_hotels({user}) -'
+                        ' Command completed!\n=================================================\n'.
+                        format(user=message.from_user.id))
             bot.send_message(message.from_user.id, loaders.help_text, reply_markup=ReplyKeyboardRemove())

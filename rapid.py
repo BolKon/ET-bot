@@ -35,15 +35,15 @@ def get_rapid_json(querystring, url, control_pat):
         else:
             response.raise_for_status()
     except ReadTimeout as er:
-        logger.error(f'rapid.get_rapid_json - {er}')
+        logger.error(f'rapid.get_rapid_json - {er}\n=================================================\n')
         se_res = {'result': 'timeout'}
         return se_res
     except HTTPError as er:
-        logger.error(f'rapid.get_rapid_json - {er}')
+        logger.error(f'rapid.get_rapid_json - {er}\n=================================================\n')
         se_res = {'result': 'error'}
         return se_res
     except ValueError as er:
-        logger.error(f'rapid.get_rapid_json - {er}')
+        logger.error(f'rapid.get_rapid_json - {er}\n=================================================\n')
         se_res = {'result': 'error'}
         return se_res
 
@@ -125,34 +125,30 @@ def get_hotels(h_num, hotels_dct, min_dist=0, max_dist=1000) -> list:
     :rtype: list
     """
     hotels_list = []
-    try:
-        for i_hot in range(h_num):
-            for i_ind, i_elem in enumerate(hotels_dct['data']['body']['searchResults']['results']):
-                if i_ind == i_hot:
-                    hotel = dict()
+    for i_hot in range(h_num):
+        for i_ind, i_elem in enumerate(hotels_dct['data']['body']['searchResults']['results']):
+            if i_ind == i_hot:
+                hotel = dict()
 
-                    hotel['id'] = str(i_elem['id'])
-                    hotel['name'] = i_elem['name']
+                hotel['id'] = str(i_elem['id'])
+                hotel['name'] = i_elem['name']
 
-                    if 'streetAddress' in i_elem['address']:
-                        hotel['address'] = i_elem['address']['streetAddress']
-                    else:
-                        hotel['address'] = 'Не указан'
+                if 'streetAddress' in i_elem['address']:
+                    hotel['address'] = i_elem['address']['streetAddress']
+                else:
+                    hotel['address'] = 'Не указан'
 
-                    hotel['c_center'] = 'Нет данных'
-                    for i_lab in i_elem['landmarks']:
-                        if i_lab['label'] in ('City center', 'Центр города'):
-                            hotel['c_center'] = i_lab['distance']
+                hotel['c_center'] = 'Нет данных'
+                for i_lab in i_elem['landmarks']:
+                    if i_lab['label'] in ('City center', 'Центр города'):
+                        hotel['c_center'] = i_lab['distance']
 
+                if hotel['c_center'] != 'Нет данных':
                     c_dist_str = re.sub(r',', '.', hotel['c_center'])
                     c_dist = float(re.sub(r' км', '', c_dist_str))
                     if min_dist <= c_dist <= max_dist:
                         hotel['current'] = i_elem['ratePlan']['price']['current']
                         hotels_list.append(hotel)
-    except BaseException as er:
-        logger.error(f'rapid.get_hotels - {er}')
-        hotels_list = []
-        return hotels_list
     return hotels_list
 
 
